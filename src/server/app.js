@@ -10,6 +10,8 @@ import configs from '../../configs/project/server';
 import clientConfigs from '../../configs/project/client';
 import middlewares from './middlewares';
 import routes from './routes';
+import nev from './utils/emailVerification';
+import User from './models/User';
 
 const appPromise = new Promise((resolve, reject) => {
   const app = express();
@@ -29,6 +31,7 @@ const appPromise = new Promise((resolve, reject) => {
 
   // connect to mongolab
   if (configs.mongo) {
+    mongoose.Promise = global.Promise;
     mongoose.connect(configs.mongo[env], (err) => {
       if (err) {
         throw err;
@@ -42,6 +45,34 @@ const appPromise = new Promise((resolve, reject) => {
     console.log('[Service] [Mongo]\tdisabled');
     return reject(new Error('MongoDB URI is required'));
   }
+
+  // configure email-verification setting
+  nev.configureAsync({
+    persistentUserModel: User,
+    verificationURL: 'http://localhost:3000/email-verification/${URL}',
+    transportOptions: {
+      service: 'Gmail',
+      auth: {
+        user: 'noreply@deeperience.com',
+        pass: '123holisi',
+      },
+    },
+  },(err, options) =>{
+    if (err) {
+      console.log(err);
+      return;
+    }
+  });
+
+  nev.generateTempUserModel(User, function(err, tempUserModel) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    console.log('generated temp user model: ' + (typeof tempUserModel === 'function'));
+  });
+
 });
 
 export default appPromise;

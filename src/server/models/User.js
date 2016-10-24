@@ -18,14 +18,8 @@ const hashPassword = (rawPassword = '') => {
 let User = new mongoose.Schema({
   name: String,
   email: {
-    value: {
-      type: String,
-      required: true,
-    },
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
+    type: String,
+    required: true,
   },
   password: {
     type: String,
