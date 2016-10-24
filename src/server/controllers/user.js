@@ -138,10 +138,10 @@ export default {
     // });
 
 
-    console.log(email);
-    
+
     nev.createTempUser(newUser, function(err, existingPersistentUser, newTempUser) {
       if (err) {
+        console.log(err);
         return res.status(404).send('ERROR: creating temp user FAILED');
       }
 
@@ -155,8 +155,6 @@ export default {
       // new user created
       if (newTempUser) {
         var URL = newTempUser[nev.options.URLFieldName];
-        console.log('URL',URL);
-
         nev.sendVerificationEmail(email, URL, function(err, info) {
           if (err) {
             console.log(err);
