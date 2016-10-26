@@ -3,8 +3,9 @@ import path from 'path';
 import express from 'express';
 import favicon from 'serve-favicon';
 import morgan from './morgan';
-import passport from './passport';
+import passportInit from './passportInit';
 import mountStore from './mountStore';
+import mountHelper from './mountHelper';
 import initCookie from './initCookie';
 
 export default ({ app }) => {
@@ -36,9 +37,12 @@ export default ({ app }) => {
   // mount redux store
   app.use(mountStore);
 
+  // mount custom helpers
+  app.use(mountHelper);
+
   // initialize cookie
   app.use(initCookie);
 
   // setup passport
-  app.use(passport);
+  app.use(passportInit);
 };

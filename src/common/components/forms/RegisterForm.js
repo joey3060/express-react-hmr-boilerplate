@@ -1,9 +1,11 @@
 import React, { Component, PropTypes } from 'react';
-import { reduxForm } from 'redux-form';
+import { Field, reduxForm } from 'redux-form';
+import Button from 'react-bootstrap/lib/Button';
 // import validator from 'validator';
-import Form from '../main/Form';
-import Input from '../reduxForm/Input';
 import userAPI from '../../api/user';
+import { validateForm } from '../../actions/formActions';
+import { pushErrors } from '../../actions/errorActions';
+import { Form, FormField, FormFooter } from '../utils/BsForm';
 
 const validate = (values) => {
   const errors = {};
@@ -23,54 +25,75 @@ const validate = (values) => {
   return errors;
 };
 
+let asyncValidate = (values, dispatch) => {
+  return dispatch(validateForm('register', 'email', values.email))
+    .then((json) => {
+      let validationError = {};
+      if (!json.isPassed) {
+        validationError.email = json.message;
+        throw validationError;
+      }
+    });
+};
+
 class RegisterForm extends Component {
   constructor(props) {
     super(props);
-    this._handleSubmit = this._handleSubmit.bind(this);
+    this.handleSubmit = this._handleSubmit.bind(this);
   }
 
   _handleSubmit(formData) {
-    userAPI(this.context.store.getState().apiEngine)
+    return userAPI(this.context.store.getState().apiEngine)
       .register(formData)
       .catch((err) => {
-        alert('Register user fail');
+        this.context.store.dispatch(pushErrors(err));
         throw err;
       })
       .then((json) => {
-        this.context.router.push('/');
+        this.context.router.push('/user/emailVerification');
       });
   }
 
   render() {
     const {
-      fields: { name, email, password },
       handleSubmit,
+      pristine,
+      asyncValidating,
+      submitting,
+      invalid,
     } = this.props;
 
     return (
-      <Form horizontal onSubmit={handleSubmit(this._handleSubmit)}>
-        <Input
-          title="Name"
+      <Form horizontal onSubmit={handleSubmit(this.handleSubmit)}>
+        <Field
+          label="Name"
+          name="name"
+          component={FormField}
           type="text"
           placeholder="Name"
-          field={name}
         />
-        <Input
-          title="Email"
+        <Field
+          label="Email"
+          name="email"
+          component={FormField}
           type="text"
           placeholder="Email"
-          field={email}
         />
-        <Input
-          title="Password"
+        <Field
+          label="Password"
+          name="password"
+          component={FormField}
           type="password"
           placeholder="Password"
-          field={password}
         />
-        <Form.Button
-          type="submit"
-          title="Register"
-        />
+        <FormFooter>
+          <Button
+            type="submit"
+            disabled={pristine || !!asyncValidating || submitting || invalid}
+          >
+            Register
+          </Button>
+        </FormFooter>
       </Form>
     );
   }
@@ -81,17 +104,9 @@ RegisterForm.contextTypes = {
   router: PropTypes.any.isRequired,
 };
 
-RegisterForm.propTypes = {
-  fields: PropTypes.object.isRequired,
-  handleSubmit: PropTypes.func.isRequired,
-};
-
 export default reduxForm({
   form: 'register',
-  fields: [
-    'name',
-    'email',
-    'password',
-  ],
   validate,
+  asyncValidate,
+  asyncBlurFields: ['email'],
 })(RegisterForm);

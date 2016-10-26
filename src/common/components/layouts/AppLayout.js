@@ -1,9 +1,7 @@
 import React from 'react';
-import { connect } from 'react-redux';
-import Head from '../Head';
-import Navigation from '../Navigation';
+import Head from '../widgets/Head';
 
-const AppLayout = ({ cookie, children }) => (
+const AppLayout = ({ children }) => (
   <div>
     <Head
       title="Express-React-HMR-Boilerplate"
@@ -15,20 +13,16 @@ const AppLayout = ({ cookie, children }) => (
         },
       ]}
       links={[
-        // jscs:disable
         'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css',
+        'https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css',
         '/css/main.css',
-        // jscs:enable
       ]}
       scripts={[
-        // jscs:disable
         'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js',
-        // jscs:enable
       ]}
     />
-    <Navigation cookie={cookie} />
     {children}
   </div>
 );
 
-export default connect(state => state)(AppLayout);
+export default AppLayout;

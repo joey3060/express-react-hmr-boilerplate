@@ -1,33 +1,114 @@
 import React, { Component } from 'react';
-import PageLayout from '../../layouts/PageLayout';
 import { connect } from 'react-redux';
-import PageHeader from '../../main/PageHeader';
-import TodoItem from '../../TodoItem';
+import { withRouter } from 'react-router';
+import PageHeader from 'react-bootstrap/lib/PageHeader';
+import Resources from '../../../constants/Resources';
+import todoAPI from '../../../api/todo';
+import { pushErrors } from '../../../actions/errorActions';
 import {
   setTodo,
   addTodo,
   removeTodo,
 } from '../../../actions/todoActions';
-import todoAPI from '../../../api/todo';
+import { setCrrentPage, setPage } from '../../../actions/pageActions';
+import PageLayout from '../../layouts/PageLayout';
+import Pagination from '../../utils/BsPagination';
 
-@connect(state => state)
-export default class ListPage extends Component {
+class TodoItem extends Component {
+  constructor() {
+    super();
+    this.state = {
+      isEditable: false,
+      inputValue: '',
+    };
+  }
+
+  renderInput() {
+    let { inputValue } = this.state;
+
+    return (
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => this.setState({
+          inputValue: e.target.value,
+        })}
+      />
+    );
+  }
+
+  renderControlButtons() {
+    let { text, onSaveClick } = this.props;
+    let { isEditable, inputValue } = this.state;
+
+    return isEditable ? (
+      <span>
+        <button
+          onClick={() => (
+            onSaveClick(inputValue)
+              .then(() => this.setState({ isEditable: false }))
+          )}
+        >
+          Save
+        </button>
+        <button onClick={() => this.setState({ isEditable: false })}>
+          Cancel
+        </button>
+      </span>
+    ) : (
+      <span>
+        <button
+          onClick={() => this.setState({ isEditable: true, inputValue: text })}
+        >
+          Edit
+        </button>
+      </span>
+    );
+  }
+
+  render() {
+    let { onRemoveClick, text } = this.props;
+    let { isEditable } = this.state;
+
+    return (
+      <li>
+        {text}
+        {isEditable && this.renderInput()}
+        {this.renderControlButtons()}
+        <button onClick={onRemoveClick}>x</button>
+      </li>
+    );
+  }
+}
+
+class ListPage extends Component {
   constructor(props) {
     super(props);
-    this._handleAddClick = this._handleAddClick.bind(this);
+    this.handleAddClick = this._handleAddClick.bind(this);
   }
 
   componentDidMount() {
-    const { dispatch, apiEngine } = this.props;
-    if (this.props.todos.length === 0) {
+    let { dispatch, location } = this.props;
+    dispatch(setCrrentPage(Resources.TODO, location.query.page || 1));
+  }
+
+  componentDidUpdate(prevProps) {
+    let { dispatch, apiEngine, page, router, location } = this.props;
+
+    if (prevProps.page.current !== page.current) {
       todoAPI(apiEngine)
-        .list()
+        .list({ page: page.current })
         .catch((err) => {
-          alert('List todos fail');
+          dispatch(pushErrors(err));
           throw err;
         })
         .then((json) => {
           dispatch(setTodo(json.todos));
+          dispatch(setPage(Resources.TODO, json.page));
+          router.push({
+            pathname: location.pathname,
+            query: { page: json.page.current },
+          });
         });
     }
   }
@@ -38,7 +119,7 @@ export default class ListPage extends Component {
     todoAPI(apiEngine)
       .create({ text })
       .catch((err) => {
-        alert('Create todo fail');
+        dispatch(pushErrors(err));
         throw err;
       })
       .then((json) => {
@@ -47,12 +128,26 @@ export default class ListPage extends Component {
       });
   }
 
-  _handleRemoveClick(id) {
+  handleSaveClick(id, newText) {
+    let { dispatch, apiEngine } = this.props;
+
+    return todoAPI(apiEngine)
+      .update(id, { text: newText })
+      .catch((err) => {
+        dispatch(pushErrors(err));
+        throw err;
+      })
+      .then((json) => {
+        this.fetchTodos();
+      });
+  }
+
+  handleRemoveClick(id) {
     const { dispatch, apiEngine } = this.props;
     todoAPI(apiEngine)
       .remove(id)
       .catch((err) => {
-        alert('Remove todo fail');
+        dispatch(pushErrors(err));
         throw err;
       })
       .then((json) => {
@@ -61,19 +156,29 @@ export default class ListPage extends Component {
   }
 
   render() {
+    let { page } = this.props;
+
     return (
       <PageLayout>
-        <PageHeader title="Todo List" />
+        <PageHeader>Todo List ({`${page.current} / ${page.total}`})</PageHeader>
         <input type="text" ref="todotext" />
-        <button onClick={this._handleAddClick}>Add Todo</button>
+        <button onClick={this.handleAddClick}>Add Todo</button>
         <ul>
-          {this.props.todos.map((todo, index) =>
+          {this.props.todos.map((todo) =>
             <TodoItem
-              key={index}
-              onRemoveClick={this._handleRemoveClick.bind(this, todo._id)}
+              key={todo._id}
+              onRemoveClick={this.handleRemoveClick.bind(this, todo._id)}
+              onSaveClick={this.handleSaveClick.bind(this, todo._id)}
               text={todo.text} />)}
         </ul>
+        <Pagination resourceName={Resources.TODO} />
       </PageLayout>
     );
   }
 };
+
+export default withRouter(connect(state => ({
+  apiEngine: state.apiEngine,
+  todos: state.todos,
+  page: state.pages[Resources.TODO] || {},
+}))(ListPage));

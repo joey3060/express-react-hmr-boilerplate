@@ -1,6 +1,6 @@
 # Express-React-HMR-Boilerplate
 
-[![Build Status](https://travis-ci.org/gocreating/express-react-hmr-boilerplate.svg?branch=master)](https://travis-ci.org/gocreating/express-react-hmr-boilerplate)
+[![Build Status](https://travis-ci.org/gocreating/express-react-hmr-boilerplate.svg?branch=dev)](https://travis-ci.org/gocreating/express-react-hmr-boilerplate)
 [![Dependency Status](https://david-dm.org/gocreating/express-react-hmr-boilerplate.svg)](https://david-dm.org/gocreating/express-react-hmr-boilerplate)
 
 This is a boilerplate for scaffolding MERN stack projects with livereload feature supported.
@@ -17,11 +17,11 @@ This is a boilerplate for scaffolding MERN stack projects with livereload featur
 - Livereload
 - Server-Side Rendering (SSR) & State Fetching (Isomorphic)
 - Webpack + Code Splitting
+- CSS Modules
 - ES6/7 + Babel
 - Travis CI Template
 - Heroku Deploy Script
 - Examples
-  - CSS Modules
   - Simple Todo List App
   - Passport + Jwt Authentication
   - i18n
@@ -169,6 +169,8 @@ npm run install-android
 
 ## Setup a new project
 
+Follow the commands below to integrate this boilerplate into your own project as `mirror` branch.
+
 ``` bash
 cd <your_project>
 git flow init -d
@@ -187,21 +189,44 @@ git remote add origin <your_project.git>
 git push -u origin master
 ```
 
+Once there is a new version of this boilerplate, you can upgrade with the following commands
+
+```
+git checkout mirror
+git pull mirror mirror
+git checkout develop
+git flow feature start upgrade-mirror
+git merge --no-ff --no-edit mirror
+git flow feature finish upgrade-mirror
+```
+
 ## Roadmap
 
-- [x] Integrate with redux-form
-- [x] Integrate with form validation
-- [x] Move imports-/exports-loader to devDependencies
-- [x] i18n
-- [x] Use redux-thunk
-- [x] CookieStore
-- [ ] ES6 test scripts
+### v1.0
+
+- [x] [Travis Testing](https://github.com/gocreating/express-react-hmr-boilerplate/commit/e5273694dd5a75305e8a778c0ac660d2e7340916)
+- [x] [Disable submit button when form submitting](https://github.com/gocreating/express-react-hmr-boilerplate/commit/88557e47a978238b0a0dee198a7c86f0aa01145a)
+- [x] [Asynchronous redux-form validation (detect duplicate email)](https://github.com/gocreating/express-react-hmr-boilerplate/commit/4eff5b583b6ab3a70f36441d77805550c4224b14)
+- [x] [Error handling](https://github.com/gocreating/express-react-hmr-boilerplate/commit/ca4db0d594e13950e46b32c5458e1a695136c0c3)
+  - reference: [Checklist: Best Practices of Node.JS Error Handling](http://goldbergyoni.com/checklist-best-practices-of-node-js-error-handling/)
+- [x] [PM2 Integration](https://github.com/gocreating/express-react-hmr-boilerplate/commit/e427d7c3a9efea971557b0a2d7a6397b43ca4760)
+- [x] [Rename resource as resource`s`](https://github.com/gocreating/express-react-hmr-boilerplate/commit/039baadff0bdb22e5340153a2a9fe1935f87b7d9)
+- [x] [Todo#Update API & Todo#Edit Functionality](https://github.com/gocreating/express-react-hmr-boilerplate/commit/daf1773e9e1bd43f7ce4b0106a77b03b78ae6c0c)
+- [x] [Pagination Mechanism](https://github.com/gocreating/express-react-hmr-boilerplate/commit/9668797568b5d4b6a3c7f6f47e54dff9ed343802)
+- [x] [Bug Fix for Intl](https://github.com/gocreating/express-react-hmr-boilerplate/commit/49f085f51054c7d8f8a7968f616a8ffc01458094)
+  - reference:
+    1. [Changing locale and FormattedMessage not updated instantly](https://github.com/yahoo/react-intl/issues/371)
+    2. [react-redux API docs](https://github.com/reactjs/react-redux/blob/master/docs/api.md#connectmapstatetoprops-mapdispatchtoprops-mergeprops-options)
+- [x] [User Roles](https://github.com/gocreating/express-react-hmr-boilerplate/commit/1613ea6e4253f8216946ef0fc1f989293ed60e61)
+- [x] [Admin](https://github.com/gocreating/express-react-hmr-boilerplate/commit/4321886d3c9ecfb047013d1daa76c0ee3ca5412c)
+- [ ] Google analytics
+- [ ] Social Login
+- [ ] Edit User Profile
+- [ ] Add License
+
+### v1.0+
+
+- [ ] Facebook Messenger Bot Example
+- [ ] [Stripe](https://stripe.com/) Payment System + Donation Button Example
 - [ ] Mail System
-- [ ] Asynchronous redux-form validation (detect duplicate username/email)
-- [ ] [Error handling](http://goldbergyoni.com/checklist-best-practices-of-node-js-error-handling/)
-- [ ] Pagination
-- [ ] Disable submit button when form submitting
-- [ ] Todo#Update API & Todo#Edit Functionality
-- [x] File Uploading (e.g. Avatar)
-- [ ] Facebook Login
-- [x] Ajax progress bar
+- [ ] Automatically Refresh Token

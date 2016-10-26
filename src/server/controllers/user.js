@@ -1,38 +1,55 @@
+import Errors from '../../common/constants/Errors';
 import { handleDbError } from '../decorators/handleError';
 import User from '../models/User';
 import filterAttribute from '../utils/filterAttribute';
 import nev from '../utils/emailVerification';
-import nodemailer from 'nodemailer'
+import { loginUser } from '../../common/actions/userActions';
+import randToken from 'rand-token';
 
 export default {
+  list(req, res) {
+    User.paginate({ page: req.query.page }, handleDbError(res)((page) => {
+      User
+        .find({})
+        .sort({ createdAt: 'desc' })
+        .limit(page.limit)
+        .skip(page.skip)
+        .exec(handleDbError(res)((users) => {
+          res.json({
+            users: users,
+            page: page,
+          });
+        }));
+    }));
+  },
+
   create(req, res) {
-    console.log('HELJEKFJDKLFJKLDJl');
-    console.log('req', req);
     User.findOne({
       'email.value': req.body.email,
     }, handleDbError(res)((user) => {
-      if (user !== null) {
-        res.json({
-          isError: true,
-          errors: [{
-            name: 'Duplicate Email',
-            message: 'Email is already used',
-          }],
-        });
+      if (user) {
+        res.errors([Errors.USER_EXISTED]);
       } else {
+        const randtoken = randToken.generate(nev.options.URLLength);
         const user = User({
           name: req.body.name,
           email: {
             value: req.body.email,
           },
           password: req.body.password,
+          emailVerifyingUrl: randtoken,
         });
-
         user.save(handleDbError(res)((user) => {
-          res.json({
-            user: user,
-            isError: false,
-          });
+          nev.sendVerificationEmail(user.email.value, randtoken)
+            .then((info) => {
+              res.json({
+                user: user,
+                info,
+              });
+            })
+            .catch(err => {
+              throw new Error('sending Mail Error');
+            });
         }));
       }
     }));
@@ -44,22 +61,22 @@ export default {
     }, handleDbError(res)((user) => {
       if (!user) {
         res.json({
-          isError: false,
           isAuth: false,
         });
       } else {
         user.auth(req.body.password, handleDbError(res)((isAuth) => {
           if (isAuth) {
             const token = user.toJwtToken();
-            res.json({
-              isError: false,
-              isAuth: true,
-              token: token,
-              user: user,
-            });
+            user.lastLoggedInAt = new Date();
+            user.save(handleDbError(res)((user) => {
+              res.json({
+                isAuth: true,
+                token: token,
+                user: user,
+              });
+            }));
           } else {
             res.json({
-              isError: false,
               isAuth: false,
             });
           }
@@ -68,16 +85,34 @@ export default {
     }));
   },
 
+  socialLogin(req, res, next) {
+    let { user } = req;
+    let token = user.toJwtToken();
+
+    user.lastLoggedInAt = new Date();
+    user.save(handleDbError(res)(() => {
+      req.store
+        .dispatch(loginUser({
+          token: token,
+          data: user,
+        }))
+        .then(() => {
+          let { token, user } = req.store.getState().cookies;
+
+          res.cookie('token', token);
+          res.cookie('user', user);
+          res.redirect('/');
+        });
+    }));
+  },
+
   logout(req, res) {
     req.logout();
-    res.json({
-      isError: false,
-    });
+    res.json({});
   },
 
   show(req, res) {
     res.json({
-      isError: false,
       user: req.user,
     });
   },
@@ -88,7 +123,6 @@ export default {
       res.json({
         originAttributes: req.body,
         updatedAttributes: user,
-        isError: false,
       });
     }));
   },
@@ -97,84 +131,8 @@ export default {
     // use `req.file` to access the avatar file
     // and use `req.body` to access other fileds
     res.json({
-      downloadURL: `/user/${req.user._id}/${req.file.filename}`,
-      isError: false,
+      downloadURL: `/users/${req.user._id}/${req.file.filename}`,
     });
-  },
-
-  verificationEmail(req, res) {
-    let email = req.body.email;
-    let newUser = User({
-      name: req.body.name,
-      email: req.body.email,
-      password: req.body.password,
-    });
-    //
-    // let smtpTransport = nodemailer.createTransport("SMTP",{
-    //   service: "Gmail",
-    //   auth: {
-    //     user: "noreply@deeperience.com",
-    //     pass: "123holisi",
-    //   }
-    // })
-    //
-    // rand = Math.floor((Math.random() * 100) + 87);
-    // host=req.get('host');
-    // link="http://"+req.get('host')+"/verify?id="+rand;
-    // mailOptions={
-    //   to : req.body.email,
-    //   subject : "Please confirm your Email account",
-    //   html : "Hello,<br> Please Click on the link to verify your email.<br><a href="+link+">Click here to verify</a>"
-    // }
-    // console.log(mailOptions);
-    // smtpTransport.sendMail(mailOptions, function(error, response){
-    //   if(error){
-    //     console.log(error);
-    //     res.end("error");
-    //   }else{
-    //     console.log("Message sent: " + response.message);
-    //     res.end("sent");
-    //   }
-    // });
-
-
-
-    nev.createTempUser(newUser, function(err, existingPersistentUser, newTempUser) {
-      if (err) {
-        console.log(err);
-        return res.status(404).send('ERROR: creating temp user FAILED');
-      }
-
-      // user already exists in persistent collection
-      if (existingPersistentUser) {
-        return res.json({
-          msg: 'You have already signed up and confirmed your account. Did you forget your password?'
-        });
-      }
-
-      // new user created
-      if (newTempUser) {
-        var URL = newTempUser[nev.options.URLFieldName];
-        nev.sendVerificationEmail(email, URL, function(err, info) {
-          if (err) {
-            console.log(err);
-            
-            return res.status(404).send('ERROR: sending verification email FAILED');
-          }
-          res.json({
-            msg: 'An email has been sent to you. Please check it to verify your account.',
-            info: info
-          });
-        });
-
-        // user already exists in temporary collection!
-      } else {
-        res.json({
-          msg: 'You have already signed up. Please check your email to verify your account.'
-        });
-      }
-    });
-
   },
 
 };

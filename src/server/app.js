@@ -17,6 +17,16 @@ const appPromise = new Promise((resolve, reject) => {
   const app = express();
   app.set('env', env);
 
+  // error handler for the whole app process
+  process.on('uncaughtException', (err) => {
+    console.log('uncaughtException', err);
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, p) => {
+    throw reason;
+  });
+
   // initialize firebase
   if (configs.firebase && clientConfigs.firebase) {
     let firebase = require('firebase');
@@ -31,7 +41,6 @@ const appPromise = new Promise((resolve, reject) => {
 
   // connect to mongolab
   if (configs.mongo) {
-    mongoose.Promise = global.Promise;
     mongoose.connect(configs.mongo[env], (err) => {
       if (err) {
         throw err;
@@ -39,6 +48,15 @@ const appPromise = new Promise((resolve, reject) => {
       console.log('[Service] [Mongo]\tenabled');
       middlewares({ app });
       routes({ app });
+      // error handler for the current request
+      app.use((err, req, res, next) => {
+        console.error(err.stack);
+        if (env !== 'production') {
+          res.status(500).send(`<pre>${err.stack}</pre>`);
+        } else {
+          res.status(500).send('Service Unavailable');
+        }
+      });
       return resolve(app);
     });
   } else {
@@ -47,7 +65,7 @@ const appPromise = new Promise((resolve, reject) => {
   }
 
   // configure email-verification setting
-  nev.configureAsync({
+  nev.configure({
     persistentUserModel: User,
     verificationURL: 'http://localhost:3000/email-verification/${URL}',
     transportOptions: {
@@ -57,22 +75,11 @@ const appPromise = new Promise((resolve, reject) => {
         pass: '123holisi',
       },
     },
-  },(err, options) =>{
-    if (err) {
-      console.log(err);
-      return;
-    }
-  });
-
-  nev.generateTempUserModel(User, function(err, tempUserModel) {
-    if (err) {
-      console.log(err);
-      return;
-    }
-
-    console.log('generated temp user model: ' + (typeof tempUserModel === 'function'));
-  });
-
+  })
+    .catch((err) => {
+      console.log('ERROR!');
+      reject(err);
+    });
 });
 
 export default appPromise;

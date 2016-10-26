@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
-import Head from '../../Head';
-import PageLayout from '../../layouts/PageLayout';
-import PageHeader from '../../main/PageHeader';
-import AvatarForm from '../../forms/AvatarForm';
-import Time from '../../Time';
+import PageHeader from 'react-bootstrap/lib/PageHeader';
 import userAPI from '../../../api/user';
+import { pushErrors } from '../../../actions/errorActions';
+import Head from '../../widgets/Head';
+import PageLayout from '../../layouts/PageLayout';
+import AvatarForm from '../../forms/AvatarForm';
+import Time from '../../widgets/Time';
 
 class ShowPage extends Component {
   constructor(props) {
@@ -15,10 +16,11 @@ class ShowPage extends Component {
   }
 
   componentDidMount() {
-    userAPI(this.context.store.getState().apiEngine)
+    let { store } = this.context;
+    userAPI(store.getState().apiEngine)
       .show()
       .catch((err) => {
-        alert('Show user fail');
+        store.dispatch(pushErrors(err));
         throw err;
       })
       .then((json) => {
@@ -37,7 +39,7 @@ class ShowPage extends Component {
             'https://www.gstatic.com/firebasejs/live/3.0/firebase.js',
           ]}
         />
-        <PageHeader title="My Profile" />
+        <PageHeader>My Profile</PageHeader>
         <dl className="dl-horizontal">
           <dt>_id</dt>
           <dd>{user._id}</dd>

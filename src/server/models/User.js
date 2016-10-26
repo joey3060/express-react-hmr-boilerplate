@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import configs from '../../../configs/project/server';
+import Roles from '../../common/constants/Roles';
+import paginatePlugin from './plugins/paginate';
 
 const hashPassword = (rawPassword = '') => {
   let recursiveLevel = 5;
@@ -15,20 +17,38 @@ const hashPassword = (rawPassword = '') => {
   return rawPassword;
 };
 
-let User = new mongoose.Schema({
+let UserSchema = new mongoose.Schema({
   name: String,
   email: {
     value: {
       type: String,
       required: true,
-    }
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   password: {
     type: String,
-    required: true,
+    // there is no password for a social account
+    required: false,
     set: hashPassword,
   },
+  role: {
+    type: String,
+    enum: Object.keys(Roles).map(r => Roles[r]),
+    default: Roles.USER,
+  },
   avatarURL: String,
+  social: {
+    profile: {
+      facebook: Object,
+      linkedin: Object,
+    },
+  },
+  emailVerifyingUrl: String,
+  lastLoggedInAt: Date,
 }, {
   versionKey: false,
   timestamps: {
@@ -37,12 +57,14 @@ let User = new mongoose.Schema({
   },
 });
 
-User.methods.auth = function(password, cb) {
+UserSchema.plugin(paginatePlugin);
+
+UserSchema.methods.auth = function(password, cb) {
   const isAuthenticated = (this.password === hashPassword(password));
   cb(null, isAuthenticated);
 };
 
-User.methods.toJwtToken = function(cb) {
+UserSchema.methods.toJwtToken = function(cb) {
   const user = {
     _id: this._id,
     name: this.name,
@@ -54,10 +76,11 @@ User.methods.toJwtToken = function(cb) {
   return token;
 };
 
-User.methods.toJSON = function() {
+UserSchema.methods.toJSON = function() {
   let obj = this.toObject();
   delete obj.password;
   return obj;
 };
 
-export default mongoose.model('User', User);
+let User = mongoose.model('User', UserSchema);
+export default User;
